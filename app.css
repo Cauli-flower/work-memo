@@ -78,11 +78,20 @@ body {
 .del-selected[disabled] { background: #d9bcbc; cursor: default; }
 .card.sel { background: var(--brand-soft); box-shadow: inset 0 0 0 2px var(--brand); }
 
-/* 按负责人分组 */
-.group { margin-bottom: 18px; }
-.group-head { display: flex; align-items: baseline; justify-content: space-between; padding: 2px 4px 8px; }
+/* 按负责人分组（可折叠） */
+.group-actions { display: flex; justify-content: flex-end; margin: -4px 0 6px; }
+.group { margin-bottom: 16px; }
+.group-head {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  border: none; background: none; cursor: pointer; font: inherit; color: var(--ink);
+  padding: 6px 4px 8px;
+}
+.group-head:active { opacity: .6; }
+.group-caret { display: inline-flex; color: var(--muted); }
+.group-caret svg { width: 18px; height: 18px; transition: transform .15s ease; }
+.group.collapsed .group-caret svg { transform: rotate(-90deg); }
 .group-name { font-size: 15px; font-weight: 700; }
-.group-count { font-size: 13px; color: var(--muted); }
+.group-count { margin-left: auto; font-size: 13px; color: var(--muted); }
 
 /* ---------- 卡片 ---------- */
 .card {

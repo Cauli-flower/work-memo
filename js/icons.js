@@ -12,6 +12,7 @@
     download: '<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
     upload: '<path d="M12 21V9M7 14l5-5 5 5M5 3h14"/>',
     undo: '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>',
+    chevron: '<path d="M6 9l6 6 6-6"/>',
   };
 
   function svg(name) {

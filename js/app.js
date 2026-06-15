@@ -13,6 +13,7 @@
   let taskSort = 'due';      // due 按截止日期 | assignee 按负责人分组
   let selectMode = false;    // 已完成的批量删除选择模式
   let selectedIds = new Set();
+  let collapsedAssignees = new Set(); // 「按负责人」视图里已折叠的分组（按人名/'' 未指派）
 
   /* ---------------- 工具 ---------------- */
   function esc(s) {
@@ -137,16 +138,24 @@
       if (b[1].length !== a[1].length) return b[1].length - a[1].length;
       return a[0].localeCompare(b[0], 'zh');
     });
-    return entries.map(([name, items]) => {
+    const allCollapsed = entries.length > 0 && entries.every(([name]) => collapsedAssignees.has(name || ''));
+    let html = '<div class="group-actions">' +
+      '<button class="link-btn" data-group-collapse-all>' + (allCollapsed ? '全部展开' : '全部收起') + '</button>' +
+      '</div>';
+    html += entries.map(([name, items]) => {
       items.sort(sortActive);
-      return '<div class="group">' +
-        '<div class="group-head">' +
+      const key = name || '';
+      const collapsed = collapsedAssignees.has(key);
+      return '<div class="group' + (collapsed ? ' collapsed' : '') + '">' +
+        '<button class="group-head" data-group-toggle="' + esc(key) + '">' +
+          '<span class="group-caret">' + window.Icons.svg('chevron') + '</span>' +
           '<span class="group-name">' + (name ? esc(name) : '未指派') + '</span>' +
           '<span class="group-count">' + items.length + ' 项</span>' +
-        '</div>' +
-        '<div class="list">' + items.map(taskCard).join('') + '</div>' +
+        '</button>' +
+        (collapsed ? '' : '<div class="list">' + items.map(taskCard).join('') + '</div>') +
       '</div>';
     }).join('');
+    return html;
   }
 
   function renderTasks() {
@@ -418,7 +427,7 @@
 
   /* ---------------- 事件委托 ---------------- */
   appEl.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-toggle],[data-edit-task],[data-edit-note],[data-new-task],[data-new-note],[data-filter],[data-sort],[data-select-start],[data-select-cancel],[data-select-all],[data-select-toggle],[data-select-delete],[data-export],[data-import],[data-clear]');
+    const t = e.target.closest('[data-toggle],[data-edit-task],[data-edit-note],[data-new-task],[data-new-note],[data-filter],[data-sort],[data-group-toggle],[data-group-collapse-all],[data-select-start],[data-select-cancel],[data-select-all],[data-select-toggle],[data-select-delete],[data-export],[data-import],[data-clear]');
     if (!t) return;
 
     if (t.hasAttribute('data-toggle')) {
@@ -443,6 +452,20 @@
     }
     if (t.hasAttribute('data-filter')) { taskFilter = t.getAttribute('data-filter'); exitSelect(); render(); return; }
     if (t.hasAttribute('data-sort')) { taskSort = t.getAttribute('data-sort'); render(); return; }
+    if (t.hasAttribute('data-group-toggle')) {
+      const key = t.getAttribute('data-group-toggle');
+      if (collapsedAssignees.has(key)) collapsedAssignees.delete(key); else collapsedAssignees.add(key);
+      render();
+      return;
+    }
+    if (t.hasAttribute('data-group-collapse-all')) {
+      const src = Store.getTasks().filter((x) => taskFilter === 'done' ? x.done : !x.done);
+      const keys = Array.from(new Set(src.map((x) => x.assignee || '')));
+      const allCollapsed = keys.length > 0 && keys.every((k) => collapsedAssignees.has(k));
+      keys.forEach((k) => { if (allCollapsed) collapsedAssignees.delete(k); else collapsedAssignees.add(k); });
+      render();
+      return;
+    }
     if (t.hasAttribute('data-select-start')) { selectMode = true; selectedIds = new Set(); render(); return; }
     if (t.hasAttribute('data-select-cancel')) { exitSelect(); render(); return; }
     if (t.hasAttribute('data-select-all')) {
