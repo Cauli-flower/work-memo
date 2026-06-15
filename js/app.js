@@ -7,7 +7,7 @@
   const sheetEl = document.getElementById('sheet');
   const tabs = Array.from(document.querySelectorAll('.tab'));
 
-  const APP_VERSION = 'v10'; // 与 service-worker.js 的缓存版本同步；改动发布时一起 +1
+  const APP_VERSION = 'v11'; // 与 service-worker.js 的缓存版本同步；改动发布时一起 +1
   const VIEW_TITLES = { tasks: '任务', notes: '速记', settings: '设置' };
   let currentView = 'tasks';
   let taskFilter = 'active'; // active | done
@@ -330,7 +330,8 @@
       (editing
         ? (task.done
             ? '<button class="row-btn" data-restore-task>' + ico('undo') + '<span>恢复为任务（取消完成）</span></button>'
-            : '<button class="row-btn danger" data-del-task>' + ico('trash') + '<span>删除任务</span></button>')
+            : '<button class="row-btn" data-remind>' + ico('calendar') + '<span>提醒我（加入手机日历）</span></button>' +
+              '<button class="row-btn danger" data-del-task>' + ico('trash') + '<span>删除任务</span></button>')
         : ''));
 
     const dueInput = sheetEl.querySelector('#f-due');
@@ -375,6 +376,14 @@
       taskFilter = 'active';                       // 切到「进行中」让用户看到它已移回
       closeSheet();
       render();
+    });
+    const remind = sheetEl.querySelector('[data-remind]');
+    if (remind) remind.addEventListener('click', () => {
+      const due = sheetEl.querySelector('#f-due').value;
+      if (!due) { alert('先填「截止日期」，再加入日历提醒。'); return; }
+      const ttl = sheetEl.querySelector('#f-title').value.trim() || '（无标题任务）';
+      const who = sheetEl.querySelector('#f-assignee').value.trim();
+      remindViaCalendar(task.id, ttl, who, due);
     });
   }
 
@@ -427,6 +436,50 @@
     if (del) del.addEventListener('click', () => {
       if (confirm('删除这条速记？')) { Store.removeNote(note.id); closeSheet(); render(); }
     });
+  }
+
+  /* ---------------- 到期提醒：导出为手机日历事件(.ics) ---------------- */
+  function escICS(s) {
+    return String(s == null ? '' : s)
+      .replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+  }
+  // 标题就用任务本身的标题（带负责人），便于在日历里分辨；UID 固定到任务 id，
+  // 改期后再次「提醒我」会更新原事件而非新增（取决于日历是否支持）。
+  function buildReminderICS(id, title, assignee, due) {
+    const p = (n) => String(n).padStart(2, '0');
+    const [y, m, d] = due.split('-').map(Number);
+    const day = '' + y + p(m) + p(d);
+    const start = day + 'T090000';          // 到期日 09:00（本地时间）提醒
+    const end = day + 'T093000';
+    const now = new Date();
+    const stamp = '' + now.getUTCFullYear() + p(now.getUTCMonth() + 1) + p(now.getUTCDate()) +
+      'T' + p(now.getUTCHours()) + p(now.getUTCMinutes()) + p(now.getUTCSeconds()) + 'Z';
+    const seq = Math.floor(now.getTime() / 1000); // 每次导出递增，便于日历接受“更新”
+    const summary = title + (assignee ? '（' + assignee + '）' : '');
+    return [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//work-memo//ZH//', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+      'BEGIN:VEVENT',
+      'UID:wm-task-' + id + '@work-memo',
+      'SEQUENCE:' + seq,
+      'DTSTAMP:' + stamp,
+      'DTSTART:' + start,
+      'DTEND:' + end,
+      'SUMMARY:' + escICS(summary),
+      'DESCRIPTION:' + escICS('「工作备忘」截止提醒'),
+      'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + escICS(summary), 'TRIGGER:PT0S', 'END:VALARM',
+      'END:VEVENT', 'END:VCALENDAR',
+    ].join('\r\n');
+  }
+  function remindViaCalendar(id, title, assignee, due) {
+    const blob = new Blob([buildReminderICS(id, title, assignee, due)], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '提醒-' + (title || '任务').slice(0, 20) + '.ics';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   /* ---------------- 备份导入导出 ---------------- */
