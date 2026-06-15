@@ -7,6 +7,7 @@
   const sheetEl = document.getElementById('sheet');
   const tabs = Array.from(document.querySelectorAll('.tab'));
 
+  const APP_VERSION = 'v10'; // 与 service-worker.js 的缓存版本同步；改动发布时一起 +1
   const VIEW_TITLES = { tasks: '任务', notes: '速记', settings: '设置' };
   let currentView = 'tasks';
   let taskFilter = 'active'; // active | done
@@ -250,12 +251,17 @@
         '<input type="file" id="import-file" accept="application/json,.json" hidden />' +
       '</div>' +
       '<div class="section">' +
+        '<div class="section-title">更新</div>' +
+        '<button class="row-btn" data-check-update>' + ico('refresh') + '<span>检查更新</span></button>' +
+        '<div class="hint">当前版本 ' + APP_VERSION + '。联网时一般会自动更新；若没更新到，点这里手动拉取最新版（无需卸载主屏图标）。</div>' +
+      '</div>' +
+      '<div class="section">' +
         '<div class="section-title">数据</div>' +
         '<div class="hint">当前：' + c.tasks + ' 项任务 · ' + c.notes + ' 条速记。<br>' +
           '所有数据只保存在本机此应用里，不会上传任何服务器。卸载应用或清除浏览器数据会丢失，建议定期导出备份。</div>' +
         '<button class="row-btn danger" data-clear>' + ico('trash') + '<span>清空所有数据</span></button>' +
       '</div>' +
-      '<div class="about">工作备忘 · 本地版</div>';
+      '<div class="about">工作备忘 · 本地版 · ' + APP_VERSION + '</div>';
   }
 
   /* ---------------- 编辑弹层 ---------------- */
@@ -295,7 +301,7 @@
   function focusField(el) {
     if (!el) return;
     el.focus();
-    setTimeout(() => { try { el.scrollIntoView({ block: 'center' }); } catch (e) {} }, 250);
+    setTimeout(() => { try { el.scrollIntoView({ block: 'nearest' }); } catch (e) {} }, 250);
   }
 
   function taskEditor(task, opts) {
@@ -453,9 +459,23 @@
     reader.readAsText(file);
   }
 
+  /* ---------------- 手动检查更新 ---------------- */
+  // 主动拉取新版 Service Worker + 清掉旧缓存再刷新，强制用上最新版本。
+  function checkForUpdate(btn) {
+    if (!navigator.onLine) { alert('需要联网才能检查更新。'); return; }
+    if (btn) { btn.disabled = true; const s = btn.querySelector('span'); if (s) s.textContent = '正在检查更新…'; }
+    Promise.resolve()
+      .then(() => ('serviceWorker' in navigator) ? navigator.serviceWorker.getRegistration() : null)
+      .then((reg) => reg ? reg.update() : null)               // 有新版 SW 就拉下来
+      .then(() => window.caches ? caches.keys() : [])
+      .then((keys) => Promise.all((keys || []).map((k) => caches.delete(k)))) // 清旧缓存
+      .catch(() => {})
+      .then(() => location.reload());                          // 联网刷新 → 取到最新文件
+  }
+
   /* ---------------- 事件委托 ---------------- */
   appEl.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-toggle],[data-edit-task],[data-edit-note],[data-new-task],[data-new-note],[data-filter],[data-sort],[data-group-toggle],[data-group-collapse-all],[data-select-start],[data-select-cancel],[data-select-all],[data-select-toggle],[data-select-delete],[data-export],[data-import],[data-clear]');
+    const t = e.target.closest('[data-toggle],[data-edit-task],[data-edit-note],[data-new-task],[data-new-note],[data-filter],[data-sort],[data-group-toggle],[data-group-collapse-all],[data-select-start],[data-select-cancel],[data-select-all],[data-select-toggle],[data-select-delete],[data-export],[data-import],[data-clear],[data-check-update]');
     if (!t) return;
 
     if (t.hasAttribute('data-toggle')) {
@@ -519,6 +539,7 @@
       }
       return;
     }
+    if (t.hasAttribute('data-check-update')) return checkForUpdate(t);
     if (t.hasAttribute('data-export')) return doExport();
     if (t.hasAttribute('data-import')) { appEl.querySelector('#import-file').click(); return; }
     if (t.hasAttribute('data-clear')) {
