@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#4263eb" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="工作备忘" />
+  <link rel="apple-touch-icon" href="icons/icon-180.png" />
+  <link rel="manifest" href="manifest.json" />
+  <title>工作备忘</title>
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1 id="view-title">任务</h1>
+    <div id="header-sub" class="header-sub"></div>
+  </header>
+
+  <main id="app" class="app-main"><!-- 各页面渲染到这里 --></main>
+
+  <nav class="tabbar">
+    <button class="tab" data-view="tasks"><span class="tab-ico" data-icon="check"></span><span>任务</span></button>
+    <button class="tab" data-view="notes"><span class="tab-ico" data-icon="note"></span><span>速记</span></button>
+    <button class="tab" data-view="settings"><span class="tab-ico" data-icon="settings"></span><span>设置</span></button>
+  </nav>
+
+  <!-- 编辑用的弹层（任务 / 速记 共用一个容器） -->
+  <div id="sheet" class="sheet-backdrop" hidden></div>
+
+  <script src="js/store.js"></script>
+  <script src="js/icons.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
