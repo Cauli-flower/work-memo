@@ -259,15 +259,43 @@
   }
 
   /* ---------------- 编辑弹层 ---------------- */
+  // iOS 软键盘是盖在页面上的，不会顶起布局。用 VisualViewport 把弹层收进
+  // 「键盘上方的可见区域」，这样表单始终浮在键盘之上，不会被挡。
+  function syncSheetVV() {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    sheetEl.style.top = vv.offsetTop + 'px';
+    sheetEl.style.height = vv.height + 'px';
+    sheetEl.style.bottom = 'auto';
+  }
   function openSheet(innerHTML) {
     sheetEl.innerHTML = '<div class="sheet">' + innerHTML + '</div>';
     sheetEl.hidden = false;
     window.Icons.paint(sheetEl);
     requestAnimationFrame(() => sheetEl.classList.add('open'));
+    if (window.visualViewport) {
+      syncSheetVV();
+      window.visualViewport.addEventListener('resize', syncSheetVV);
+      window.visualViewport.addEventListener('scroll', syncSheetVV);
+    }
   }
   function closeSheet() {
     sheetEl.classList.remove('open');
-    setTimeout(() => { sheetEl.hidden = true; sheetEl.innerHTML = ''; }, 200);
+    if (window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', syncSheetVV);
+      window.visualViewport.removeEventListener('scroll', syncSheetVV);
+    }
+    setTimeout(() => {
+      sheetEl.hidden = true;
+      sheetEl.innerHTML = '';
+      sheetEl.style.top = sheetEl.style.height = sheetEl.style.bottom = '';
+    }, 200);
+  }
+  // 聚焦输入框，并在键盘弹出后把它滚进可见区域（确保看得到光标）
+  function focusField(el) {
+    if (!el) return;
+    el.focus();
+    setTimeout(() => { try { el.scrollIntoView({ block: 'center' }); } catch (e) {} }, 250);
   }
 
   function taskEditor(task, opts) {
@@ -309,7 +337,7 @@
         dueInput.value = toInputDate(d);
       });
     });
-    sheetEl.querySelector('#f-title').focus();
+    focusField(sheetEl.querySelector('#f-title'));
 
     function save() {
       const fields = {
@@ -356,11 +384,11 @@
       '<label class="field"><span>标题（可留空）</span>' +
         '<input id="n-title" type="text" placeholder="标题" value="' + esc(n.title) + '" /></label>' +
       '<label class="field"><span>内容</span>' +
-        '<textarea id="n-body" rows="10" placeholder="随手记…">' + esc(n.body) + '</textarea></label>' +
+        '<textarea id="n-body" rows="5" placeholder="随手记…">' + esc(n.body) + '</textarea></label>' +
       (editing ? '<button class="row-btn" data-to-task>' + ico('check') + '<span>转为任务</span></button>' : '') +
       (editing ? '<button class="row-btn danger" data-del-note>' + ico('trash') + '<span>删除速记</span></button>' : ''));
 
-    sheetEl.querySelector('#n-body').focus();
+    focusField(sheetEl.querySelector('#n-body'));
 
     const toTask = sheetEl.querySelector('[data-to-task]');
     if (toTask) toTask.addEventListener('click', () => {
