@@ -61,6 +61,29 @@ body {
 }
 .filter.on { background: var(--brand-soft); color: var(--brand); border-color: var(--brand-soft); font-weight: 600; }
 
+/* 排序切换行 */
+.sort-row { align-items: center; margin-top: -4px; }
+.sort-label { font-size: 13px; color: var(--muted); margin-right: 2px; }
+
+/* 批量删除（已完成多选） */
+.done-actions { display: flex; justify-content: flex-end; margin: -4px 0 12px; }
+.link-btn { border: none; background: none; color: var(--brand); font-size: 14px; cursor: pointer; padding: 4px 2px; }
+.select-bar { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.select-bar .text-btn { padding: 6px 2px; }
+.del-selected {
+  margin-left: auto; border: none; border-radius: 999px;
+  background: var(--overdue); color: #fff;
+  font-size: 14px; font-weight: 600; padding: 9px 18px; cursor: pointer;
+}
+.del-selected[disabled] { background: #d9bcbc; cursor: default; }
+.card.sel { background: var(--brand-soft); box-shadow: inset 0 0 0 2px var(--brand); }
+
+/* 按负责人分组 */
+.group { margin-bottom: 18px; }
+.group-head { display: flex; align-items: baseline; justify-content: space-between; padding: 2px 4px 8px; }
+.group-name { font-size: 15px; font-weight: 700; }
+.group-count { font-size: 13px; color: var(--muted); }
+
 /* ---------- 卡片 ---------- */
 .card {
   display: flex; gap: 12px; align-items: flex-start;
@@ -145,6 +168,7 @@ body {
   display: flex; align-items: flex-end; justify-content: center;
   opacity: 0; transition: opacity .2s ease;
 }
+.sheet-backdrop[hidden] { display: none; }  /* 让 hidden 真正生效，避免透明遮罩挡住全屏点击 */
 .sheet-backdrop.open { opacity: 1; }
 .sheet {
   width: 100%; max-width: 640px;
